@@ -81,6 +81,52 @@ header {
   text-transform: uppercase;
 }
 
+/* ---- Daily verse ---- */
+.daily-verse {
+  width: min(420px, 42vw);
+  margin-left: 32px;
+  padding-left: 18px;
+  border-left: 1px solid rgba(200, 113, 58, 0.28);
+  text-align: left;
+}
+
+.daily-verse-kicker {
+  font-size: 10px;
+  color: var(--accent-amber);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.daily-verse-line {
+  font-family: 'Newsreader', serif;
+  font-size: 18px;
+  line-height: 1.4;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+
+.daily-verse-meta {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 800px) {
+  header {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .daily-verse {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
 /* ---- Tab cleanup banner ---- */
 .tab-cleanup-banner {
   background: linear-gradient(135deg, rgba(200, 113, 58, 0.04), rgba(200, 113, 58, 0.09));
@@ -888,22 +934,40 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
    SAVED FOR LATER — Checklist Column + Archive
    ================================================================ */
 
-/* ---- Two-column layout ---- */
+/* ---- Three-column layout ---- */
+/* Left:   Today Board (sticky, fixed width)
+   Center: Open tabs (flex, takes remaining space)
+   Right:  Saved for later (sticky, fixed width)
+   When viewport gets narrow we collapse columns one at a time:
+     <1100px → stack vertically; sticky drops back to static. */
 .dashboard-columns {
   display: flex;
-  gap: 32px;
+  gap: 36px;
   align-items: flex-start;
 }
 
-/* Open tabs column keeps the grid layout */
+/* Open tabs column keeps the grid layout. min-width sized so two
+   mission cards (≈240px each) can fit inside even when both side
+   columns are present. */
 .dashboard-columns .active-section {
   flex: 1;
-  min-width: 600px;
+  min-width: 0;
+}
+
+/* Today Board column — sticky on the left so the todo list stays
+   visible while you scan open tabs in the center. Fixed width keeps
+   the line length comfortable (~50ch) regardless of viewport. */
+.dashboard-columns .today-board {
+  width: 320px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 32px;
+  max-height: calc(100vh - 64px);
 }
 
 /* Saved for later column — fixed width on the right, scrolls independently */
 .deferred-column {
-  width: 280px;
+  width: 260px;
   flex-shrink: 0;
   position: sticky;
   top: 32px;
@@ -911,14 +975,29 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   overflow-y: auto;
 }
 
+/* Slightly narrower screens: drop the rightmost (Saved) column —
+   it's optional, the todo board is the work artifact. */
+@media (max-width: 1180px) {
+  .dashboard-columns .today-board {
+    width: 280px;
+  }
+}
+
 /* On narrow screens, stack vertically */
-@media (max-width: 800px) {
+@media (max-width: 1000px) {
   .dashboard-columns {
     flex-direction: column;
+    gap: 32px;
   }
+  .dashboard-columns .today-board,
   .deferred-column {
     width: 100%;
     position: static;
+    max-height: none;
+    padding-right: 0;
+    border-right: none;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--warm-gray);
   }
 }
 
@@ -1155,4 +1234,782 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   color: var(--muted);
   opacity: 0.6;
   flex-shrink: 0;
+}
+
+
+/* ================================================================
+   SOLAR TONE (节气微色) + CIRCADIAN MODE (昼夜)
+   ----------------------------------------------------------------
+   These layers tint the same underlying design tokens by ~1–2%.
+   They are *whispers*, not theme switches: a careful viewer will feel
+   spring vs autumn, day vs night, without ever being shouted at.
+
+   - data-solar:  spring | summer | autumn | winter
+       Re-tunes --paper / --card-bg / --warm-gray with a faint seasonal hue.
+   - data-mode:   day | night
+       Day = current palette (untouched).
+       Night = inverted ink/paper, gently dimmed accents.
+
+   Smooth transition so the page "breathes" rather than flips.
+   ================================================================ */
+
+html { transition: background-color 1.2s ease; }
+body { transition: background-color 1.2s ease, color 1.2s ease; }
+.mission-card,
+.deferred-column,
+.tab-cleanup-banner,
+.nudge-banner,
+.update-banner { transition: background-color 0.6s ease, border-color 0.6s ease; }
+
+
+/* ---- 节气色调（Solar Tones）— day mode only, very subtle ---- */
+html[data-solar="spring"] {
+  --paper:      #f7f6ee;   /* 芽绿底 */
+  --card-bg:    #fffef7;
+  --warm-gray:  #e6e6dc;
+}
+html[data-solar="summer"] {
+  --paper:      #f3f5f1;   /* 竹青底 */
+  --card-bg:    #fcfdfa;
+  --warm-gray:  #dde3dd;
+}
+html[data-solar="autumn"] {
+  --paper:      #f8f3e9;   /* 宣纸黄 */
+  --card-bg:    #fffcf3;
+  --warm-gray:  #ebe2ce;
+}
+html[data-solar="winter"] {
+  --paper:      #f4f5f8;   /* 雪后蓝白 */
+  --card-bg:    #fdfdff;
+  --warm-gray:  #dee1e8;
+}
+
+
+/* ---- 昼夜模式（Circadian Mode）------------------------------------
+   At night, invert the paper/ink relationship and dim accents.
+   Night mode wins over solar tone (override after the solar block).
+   --------------------------------------------------------------- */
+html[data-mode="night"] {
+  --ink:        #e9e3d8;   /* warm "moonlit page" text */
+  --paper:      #15171b;   /* deep night, slight blue */
+  --warm-gray:  #2c2e34;
+  --muted:      #807a72;
+  --card-bg:    #1c1f24;
+  --shadow:     rgba(0, 0, 0, 0.35);
+  --accent-amber: #d68a55;
+  --accent-sage:  #7a9b80;
+  --accent-slate: #7d8e9c;
+  --accent-rose:  #c87a7a;
+}
+
+/* Night × season — keep the four "feels" but darker */
+html[data-mode="night"][data-solar="spring"] {
+  --paper: #161a16;
+  --card-bg: #1d221d;
+  --warm-gray: #2b302b;
+}
+html[data-mode="night"][data-solar="summer"] {
+  --paper: #141a1a;
+  --card-bg: #1c2222;
+  --warm-gray: #2a3030;
+}
+html[data-mode="night"][data-solar="autumn"] {
+  --paper: #1a1814;
+  --card-bg: #221f1a;
+  --warm-gray: #302d27;
+}
+html[data-mode="night"][data-solar="winter"] {
+  --paper: #14171c;
+  --card-bg: #1c2026;
+  --warm-gray: #2a2e36;
+}
+
+/* Soften the paper texture & shift its blend mode at night so the
+   noise SVG doesn't look like dust on a dark page. */
+html[data-mode="night"] body::before {
+  opacity: 0.55;
+  mix-blend-mode: screen;
+}
+
+
+/* ================================================================
+   TODAY BOARD
+   ----------------------------------------------------------------
+   Lightweight work-day todo board. Lives between the header and the
+   open-tabs grid, occupying the visual center of the page.
+   Designed to match the existing "section-header → cards → muted
+   meta" rhythm used throughout the rest of the dashboard.
+   ================================================================ */
+
+.today-board {
+  display: flex;
+  flex-direction: column;
+  /* No padding/border/background — Today shares the same visual rhythm
+     as the open-tabs and saved-for-later sections (just a header line
+     and content). The sticky-column layout already isolates it. */
+  position: relative;
+  /* Subtle right divider so the eye reads it as its own column without
+     screaming "card". Disabled on narrow screens (handled below). */
+  padding-right: 24px;
+  border-right: 1px solid var(--warm-gray);
+  min-height: 0;
+}
+
+/* ---- Collapsed state ---- */
+/* Header stays visible; everything below collapses. The summary line
+   takes over to give a one-glance view of pending/done counts. */
+.today-board.is-collapsed {
+  padding-bottom: 14px;
+}
+.today-board.is-collapsed .today-board-body {
+  display: none;
+}
+.today-board.is-collapsed .today-board-line {
+  opacity: 0.4;
+}
+
+/* ---- Header row: matches the .section-header rhythm used elsewhere
+   (Open tabs / Saved for later) so the three columns share a baseline. */
+.today-board-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+  /* Match section-header height so Today / Open tabs / Saved align. */
+  min-height: 28px;
+}
+
+.today-board-title {
+  font-family: 'Newsreader', serif;
+  font-weight: 400;
+  font-size: 17px;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  flex-shrink: 0;
+  /* Same baseline as .section-header h2 (which has no margin). */
+  margin: 0;
+}
+
+.today-board-line {
+  flex: 1;
+  min-width: 8px;
+  height: 1px;
+  background: var(--warm-gray);
+}
+
+.today-board-progress {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.todo-progress-text {
+  font-family: 'Newsreader', serif;
+  font-size: 12px;
+}
+
+/* Unified small icon button used for + add, heatmap, settings, collapse */
+.today-board-add-btn,
+.today-board-icon-btn,
+.today-board-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, opacity 0.15s,
+              transform 0.2s;
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+.today-board-add-btn:hover,
+.today-board-icon-btn:hover,
+.today-board-collapse-btn:hover {
+  color: var(--ink);
+  border-color: var(--warm-gray);
+  background: var(--paper);
+  opacity: 1;
+}
+
+/* The collapse chevron flips when the board is collapsed. The SVG is a
+   “up-chevron” (▴) by default; rotating 180° makes it a ▾ (down) which
+   reads as “collapsed” in IDE / Finder muscle memory. */
+.today-board.is-collapsed .today-board-collapse-btn svg {
+  transform: rotate(180deg);
+}
+
+/* ---- Collapsed-state summary line ---- */
+.today-board-summary {
+  font-family: 'Newsreader', serif;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  padding: 4px 0 0;
+}
+.today-board-summary .summary-pending {
+  color: var(--ink);
+  font-weight: 500;
+}
+.today-board-summary .summary-done {
+  color: var(--accent-sage);
+}
+.today-board-summary .summary-empty {
+  font-style: italic;
+}
+
+
+/* ---- Body wrapper (the part that collapses) ---- */
+.today-board-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;          /* allow inner scrollers to shrink */
+  flex: 1 1 auto;
+}
+
+/* ---- Quick-add input ---- */
+.todo-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background: var(--paper);
+  border: 1px solid var(--warm-gray);
+  border-radius: 6px;
+  transition: border-color 0.15s;
+  flex-shrink: 0;
+}
+.todo-input-row:focus-within {
+  border-color: var(--accent-amber);
+}
+
+.todo-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+}
+.todo-input::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.todo-input-hint {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+
+/* ---- Todo list ---- */
+/* The scroll container caps height so the card never grows beyond the
+   viewport regardless of how many items the user types. */
+.todo-list-scroll {
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin: 0 -4px;        /* compensate for inner padding so scrollbar sits at edge */
+  padding: 0 4px;
+}
+.todo-list-scroll-done {
+  max-height: 140px;
+}
+/* Whisper-thin scrollbar matching the muted palette. Webkit only —
+   Firefox falls back to the system scrollbar (OK). */
+.todo-list-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.todo-list-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.todo-list-scroll::-webkit-scrollbar-thumb {
+  background: var(--warm-gray);
+  border-radius: 2px;
+}
+.todo-list-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+.todo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.todo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 4px;
+  border-bottom: 1px solid transparent;
+  position: relative;
+  transition: background 0.15s, opacity 0.3s;
+}
+.todo-item:hover {
+  background: rgba(0, 0, 0, 0.015);
+  border-radius: 4px;
+}
+html[data-mode="night"] .todo-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.todo-checkbox {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.15s, background 0.2s;
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0;
+}
+.todo-checkbox:hover {
+  border-color: var(--accent-sage);
+}
+.todo-checkbox:checked {
+  background: var(--accent-sage);
+  border-color: var(--accent-sage);
+}
+.todo-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+.todo-text {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  word-break: break-word;
+  cursor: text;
+  min-width: 0;
+}
+
+.todo-text-link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--muted);
+  transition: border-color 0.15s, color 0.15s;
+}
+.todo-text-link:hover {
+  color: var(--accent-amber);
+  border-bottom-color: var(--accent-amber);
+}
+
+.todo-priority {
+  flex-shrink: 0;
+  font-family: 'Newsreader', serif;
+  font-weight: 500;
+  font-size: 13px;
+  width: 16px;
+  height: 18px;
+  text-align: center;
+  margin-top: 1px;
+  /* Now a clickable button: cycle priority (none → ! → ? → none) */
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  padding: 0;
+  cursor: pointer;
+  color: var(--muted);
+  line-height: 16px;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
+}
+.todo-priority:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+html[data-mode="night"] .todo-priority:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.todo-priority-important { color: var(--accent-rose); font-weight: 600; }
+.todo-priority-research  { color: var(--accent-slate); }
+/* Empty priority slot: very faint dot, only visible on row hover
+   so it doesn't clutter the page but is reachable for click-to-mark. */
+.todo-priority-none {
+  opacity: 0;
+  color: var(--muted);
+}
+.todo-item:hover .todo-priority-none { opacity: 0.45; }
+.todo-priority-none:hover { opacity: 1 !important; }
+
+/* ---- Drag handle & dragging visuals ---- */
+.todo-drag-handle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 18px;
+  margin-top: 1px;
+  margin-right: -4px;
+  color: var(--muted);
+  opacity: 0;
+  cursor: grab;
+  transition: opacity 0.15s;
+}
+.todo-item:hover .todo-drag-handle { opacity: 0.45; }
+.todo-drag-handle:hover { opacity: 0.9 !important; }
+.todo-item.is-dragging {
+  opacity: 0.4;
+}
+.todo-item.is-dragging .todo-drag-handle { cursor: grabbing; }
+
+/* Thin horizontal line shown between rows during dragover. */
+.todo-drop-indicator {
+  height: 2px;
+  margin: 0 4px;
+  background: var(--accent-amber);
+  border-radius: 1px;
+  list-style: none;
+  pointer-events: none;
+  box-shadow: 0 0 4px rgba(0,0,0,0.06);
+}
+
+.todo-carried {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--muted);
+  opacity: 0.6;
+  letter-spacing: 0.04em;
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.todo-carried.is-stale {
+  color: var(--accent-amber);
+  opacity: 0.85;
+}
+
+.todo-delete-btn {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+.todo-item:hover .todo-delete-btn { opacity: 0.6; }
+.todo-delete-btn:hover { opacity: 1; color: var(--accent-rose); }
+
+/* Done items: strikethrough + faded, sink to bottom via separate list */
+.todo-list-done .todo-item {
+  opacity: 0.5;
+}
+.todo-list-done .todo-text {
+  text-decoration: line-through;
+  text-decoration-color: var(--muted);
+}
+
+/* Source-from-tab indicator */
+.todo-source-tab {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  color: var(--muted);
+  opacity: 0.55;
+}
+.todo-source-tab svg { width: 11px; height: 11px; }
+
+
+/* ---- Empty state ---- */
+/* One-line, left-aligned, italic muted serif — matches the "quiet
+   meta" rhythm rather than a centered hero block. */
+.todo-empty {
+  padding: 6px 0 2px;
+  text-align: left;
+  font-family: 'Newsreader', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.todo-empty-hint {
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  opacity: 0.8;
+  margin-left: 4px;
+}
+.todo-empty kbd {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  padding: 1px 5px;
+  background: var(--paper);
+  border: 1px solid var(--warm-gray);
+  border-radius: 3px;
+  color: var(--ink);
+  margin: 0 2px;
+}
+
+
+/* ---- Done section: collapsible header + scroll body ---- */
+.todo-done-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--warm-gray);
+  flex-shrink: 0;
+}
+
+.todo-done-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  margin: 0 0 6px -6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+.todo-done-toggle:hover {
+  color: var(--ink);
+  background: var(--paper);
+}
+.todo-done-chevron {
+  transition: transform 0.2s;
+}
+.todo-done-section.is-open .todo-done-chevron {
+  transform: rotate(0deg);
+}
+.todo-done-section:not(.is-open) .todo-done-chevron {
+  transform: rotate(-90deg);
+}
+
+
+/* ---- Progress bar ---- */
+/* Hidden when the board is empty so we don't get a “floating line”. */
+.todo-progress-bar {
+  height: 2px;
+  margin-top: 14px;
+  background: var(--warm-gray);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+.todo-progress-bar.is-hidden {
+  display: none;
+}
+.todo-progress-fill {
+  height: 100%;
+  background: var(--accent-sage);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.todo-progress-bar.is-complete .todo-progress-fill {
+  background: var(--accent-amber);
+  box-shadow: 0 0 6px rgba(200, 113, 58, 0.45);
+}
+
+
+/* ---- 7-day heatmap ---- */
+.todo-heatmap {
+  margin: 0 0 12px;
+  padding: 10px 10px 8px;
+  background: var(--paper);
+  border: 1px solid var(--warm-gray);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.todo-heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.todo-heatmap-cell {
+  aspect-ratio: 1.4 / 1;
+  border-radius: 3px;
+  background: var(--warm-gray);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font-size: 10px;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+.todo-heatmap-cell:hover { transform: scale(1.06); }
+.todo-heatmap-cell.is-weekend { opacity: 0.4; }
+.todo-heatmap-cell-day {
+  font-family: 'Newsreader', serif;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.todo-heatmap-cell-count {
+  font-family: 'Newsreader', serif;
+  font-size: 12px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.todo-heatmap-cell.is-today {
+  outline: 1px solid var(--accent-amber);
+  outline-offset: 1px;
+}
+/* Heat intensity (0–4) — overlays a sage tint */
+.todo-heatmap-cell.heat-1 { background: color-mix(in srgb, var(--accent-sage) 18%, var(--warm-gray)); }
+.todo-heatmap-cell.heat-2 { background: color-mix(in srgb, var(--accent-sage) 38%, var(--warm-gray)); }
+.todo-heatmap-cell.heat-3 { background: color-mix(in srgb, var(--accent-sage) 58%, var(--warm-gray)); }
+.todo-heatmap-cell.heat-4 { background: color-mix(in srgb, var(--accent-sage) 78%, var(--warm-gray)); }
+.todo-heatmap-cell.heat-3 .todo-heatmap-cell-count,
+.todo-heatmap-cell.heat-4 .todo-heatmap-cell-count { color: #fff; }
+.todo-heatmap-legend {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-align: right;
+}
+
+
+/* ---- Settings drawer ---- */
+.todo-settings {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--warm-gray);
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.todo-settings-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid var(--warm-gray);
+  border-radius: 4px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.todo-settings-item:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+  background: var(--paper);
+}
+.todo-settings-danger:hover {
+  color: var(--accent-rose);
+  border-color: var(--accent-rose);
+}
+
+
+/* ---- "Add to today" button injected into mission-card titles ---- */
+.mission-add-todo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+  padding: 0;
+  vertical-align: middle;
+}
+.mission-card:hover .mission-add-todo-btn { opacity: 0.55; }
+.mission-add-todo-btn:hover {
+  opacity: 1;
+  color: var(--accent-sage);
+  border-color: var(--accent-sage);
+}
+.page-chip-add-todo {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  opacity: 0;
+  padding: 0 4px;
+  transition: opacity 0.15s, color 0.15s;
+  display: inline-flex;
+  align-items: center;
+}
+.page-chip:hover .page-chip-add-todo { opacity: 0.6; }
+.page-chip-add-todo:hover { opacity: 1; color: var(--accent-sage); }
+
+
+/* ---- Animations: gentle fade-in for new items ---- */
+@keyframes todoFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.todo-item.is-new {
+  animation: todoFadeIn 0.3s ease-out;
+}
+
+/* On full completion the progress bar shimmers once */
+@keyframes todoShimmer {
+  0%   { box-shadow: 0 0 6px rgba(200, 113, 58, 0.30); }
+  50%  { box-shadow: 0 0 14px rgba(200, 113, 58, 0.65); }
+  100% { box-shadow: 0 0 6px rgba(200, 113, 58, 0.30); }
+}
+.todo-progress-bar.is-celebrating .todo-progress-fill {
+  animation: todoShimmer 1.4s ease-in-out 1;
+}
+
+
+/* ---- Responsive ---- */
+@media (max-width: 1000px) {
+  .today-board-header { gap: 8px; }
+  .today-board-title { font-size: 17px; }
+  .todo-input-hint { display: none; }
+  .dashboard-columns .today-board {
+    max-height: none;       /* let it grow when stacked */
+  }
+  .todo-list-scroll {
+    max-height: 240px;
+  }
 }
